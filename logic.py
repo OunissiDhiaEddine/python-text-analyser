@@ -1,10 +1,12 @@
 import os 
 import nltk
 import sys
+import string
 from docx import Document
 from collections import Counter
 import re
 from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 nltk.download('wordnet')
 
@@ -27,9 +29,12 @@ def count_words(file_path):
 
 """ Function that removes stopwords """
 def remove_stopwords(text):
-    nltk.download('stopwords')  # hada ytelechargi stop lists 
-    stop_words = set(stopwords.words('english'))  # hada ysta3ml l english 
-    cleaned_text = ' '.join(word for word in text.split() if word.lower() not in stop_words)
+    nltk.download('punkt')  
+    nltk.download('stopwords')  
+    stop_words = set(stopwords.words('english'))  # Use English stopwords
+    stop_words.add("'s")  # Add 's to the list of stopwords
+    words = word_tokenize(text)  # Split the text into words
+    cleaned_text = ' '.join(word for word in words if word.lower() not in stop_words and word not in string.punctuation)
     return cleaned_text
 
 """ function nta3 word search """

@@ -1,7 +1,7 @@
 import os 
 import nltk
 import sys
-import string
+import math 
 from docx import Document
 from collections import Counter
 import re
@@ -29,13 +29,11 @@ def count_words(file_path):
 
 """ Function that removes stopwords """
 def remove_stopwords(text):
-    nltk.download('punkt')  
-    nltk.download('stopwords')  
-    stop_words = set(stopwords.words('english'))  # Use English stopwords
-    stop_words.add("'s")  # Add 's to the list of stopwords
-    words = word_tokenize(text)  # Split the text into words
-    cleaned_text = ' '.join(word for word in words if word.lower() not in stop_words and word not in string.punctuation)
+    nltk.download('stopwords')  # hada ytelechargi stop lists 
+    stop_words = set(stopwords.words('english'))  # hada ysta3ml l english 
+    cleaned_text = ' '.join(word for word in text.split() if word.lower() not in stop_words)
     return cleaned_text
+
 
 """ function nta3 word search """
 def get_word_details(word, cleaned_text):
@@ -44,6 +42,9 @@ def get_word_details(word, cleaned_text):
     df = 0
     paragraph_ids = []
     tf = []
+    tf_idf = []
+
+    total_paragraphs = len(paragraphs)
 
     for i, paragraph in enumerate(paragraphs):
         words = paragraph.split()
@@ -51,10 +52,18 @@ def get_word_details(word, cleaned_text):
         if word_count > 0:
             df += 1
             paragraph_ids.append(i + 1)
-            tf.append(word_count / len(words))
+            term_frequency = word_count / len(words)
+            tf.append(f"{word_count}/{len(words)}")  # Store tf as a fraction
             word_frequency += word_count
 
-    return word_frequency, df, paragraph_ids, tf
+    inverse_document_frequency = math.log(total_paragraphs / df)
+
+    for term_frequency in tf:
+        tf_idf.append(float(term_frequency.split('/')[0]) / float(term_frequency.split('/')[1]) * inverse_document_frequency)  # Calculate tf-idf
+
+    average_tf_idf = sum(tf_idf) / len(tf_idf) if tf_idf else 0  # Calculate the average TF-IDF
+
+    return word_frequency, df, paragraph_ids, tf, average_tf_idf
 
 
 

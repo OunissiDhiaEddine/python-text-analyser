@@ -106,6 +106,11 @@ class ResultWindow(QWidget):
     def reorder_table(self):
         # Sort current table data based on frequency (second column)
         self.current_table_data.sort(key=lambda x: int(x[1]), reverse=True)
+        total = sum(int(row[1]) for row in self.current_table_data)  # Calculate the total frequency
+        for row in self.current_table_data:
+            frequency = int(row[1])
+            percentage = (frequency / total) * 100  # Calculate the new percentage
+            row[2] = f"{percentage:.2f}%"  # Update the percentage in the current table data
         self.populate_table(self.current_table_data)
 
     
@@ -166,10 +171,11 @@ class SearchWindow(QWidget):
 
     def search_word(self):
         word = self.search_bar.text()
-        frequency, df, paragraph_ids, tf = get_word_details(word, self.cleaned_text)
-        paragraph_ids_str = ', '.join(map(str, paragraph_ids))  # Convert paragraph_ids to a comma-separated string
-        result_text = f"Frequency: {frequency}\nDF: {df}\nParagraph IDs: {paragraph_ids_str}\nTF: {tf}"
+        frequency, df, paragraph_ids, tf, average_tf_idf = get_word_details(word, self.cleaned_text)
+        document_ids_str = ', '.join(map(str, paragraph_ids))  # Convert paragraph_ids to a comma-separated string
+        result_text = f"Frequency: {frequency}\nDF Document Frequency: {df}\nDocument IDs: {document_ids_str}\nTF Term Frequency: {tf}\nRelevance TF-IDF: {average_tf_idf}"
         self.result_label.setText(result_text)
+        self.result_label.setFont(QFont("BigNoodleTitling", 20))
 
 
 

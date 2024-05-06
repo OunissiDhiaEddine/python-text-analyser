@@ -4,59 +4,10 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox, QMenu, QAction, QInputDialog
 from PyQt5.QtGui import QPixmap, QFont, QFontDatabase, QPalette, QBrush
 from PyQt5.QtCore import Qt
-from docx import Document
+from PyQt5.QtWidgets import QLineEdit
 from nltk.stem import WordNetLemmatizer
 nltk.download('wordnet')
-
-
-""" Function that counts how many words are in a file """
-def count_words(file_path):
-    try:
-        if file_path.endswith('.txt'):
-            with open(file_path, 'r', encoding='utf-8') as file:
-                text = file.read()
-                word_count = len(text.split())
-                return word_count
-        elif file_path.endswith('.docx'):
-            doc = Document(file_path)
-            word_count = sum(len(paragraph.text.split()) for paragraph in doc.paragraphs)
-            return word_count
-        else:
-            return "Unsupported file format. Please provide a .txt or .docx file."
-    except FileNotFoundError:
-        return "File not found."
-
-""" Function that removes stopwords """
-def remove_stopwords(text):
-    stopwords = set(['a', 'an', 'the', 'in', 'on', 'at', 'and', 'or', 'but', 'for', 'to', 'of', 'with', 'by', 'as', 'from', 'into', 'onto', 'over', 'under', 'among', 'between', 'within', 'without', 'through', 'during', 'before', 'after', 'since', 'until', 'about', 'against', 'across', 'along', 'around', 'off', 'out', 'up', 'down', 'through'])
-    cleaned_text = ' '.join(word for word in text.split() if word.lower() not in stopwords)
-    return cleaned_text
-
-""" Function to show word frequency table """
-def get_word_frequency_table_data(cleaned_text):
-    words = cleaned_text.split()
-    word_count = len(words)
-    word_frequency = {}
-
-    # Count word frequency
-    for word in words:
-        word_frequency[word] = word_frequency.get(word, 0) + 1
-
-    # Calculate percentage of appearance
-    word_percentage = {word: (count / word_count) * 100 for word, count in word_frequency.items()}
-
-    # Sort word frequency by frequency in descending order
-    sorted_word_frequency = sorted(word_frequency.items(), key=lambda x: x[1], reverse=True)
-
-    # Prepare data for QTableWidget
-    table_data = []
-    for word, frequency in sorted_word_frequency:
-        percentage = word_percentage[word]
-        table_data.append([word, frequency, f'{percentage:.2f}%'])
-
-    return table_data
-
-
+from logic import count_words, remove_stopwords, get_word_frequency_table_data, get_word_details
 
 
 class ResultWindow(QWidget):
@@ -105,13 +56,24 @@ class ResultWindow(QWidget):
         self.table_widget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table_widget.customContextMenuRequested.connect(self.show_context_menu)
 
+        # Search Button
+        search_button = QPushButton("Search")
+        search_button.clicked.connect(self.open_search_window)
+        layout.addWidget(search_button)
+
+
         # Save Button
         self.save_button = QPushButton("Save Table")
         self.save_button.clicked.connect(self.save_table)
         layout.addWidget(self.save_button)
 
         self.setLayout(layout)
-         
+        self.cleaned_text = cleaned_text
+           
+    #to open the search window 
+    def open_search_window(self):
+        self.search_window = SearchWindow(self.cleaned_text, self)
+        self.search_window.show()
     # Normalize the table data
     def normalize_table(self):
         lemmatizer = WordNetLemmatizer()
@@ -171,6 +133,49 @@ class ResultWindow(QWidget):
                 QMessageBox.warning(self, "Save Error", f"An error occurred while saving the table: {str(e)}")
 
 
+
+
+
+class SearchWindow(QWidget):
+    def __init__(self, cleaned_text, result_window):
+        super(SearchWindow, self).__init__()
+        self.cleaned_text = cleaned_text
+        self.result_window = result_window  # Store the ResultWindow instance
+        layout = QVBoxLayout()
+        
+        # Search bar
+        self.search_bar = QLineEdit()
+        layout.addWidget(self.search_bar)
+        
+        # Search button
+        search_button = QPushButton("Search")
+        search_button.clicked.connect(self.search_word)
+        layout.addWidget(search_button)
+        
+        # Result label
+        self.result_label = QLabel()
+        layout.addWidget(self.result_label)
+        
+        self.setLayout(layout)
+        
+        # Set the font, background color, and window size same as ResultWindow
+        self.setFont(self.result_window.font())
+        self.setStyleSheet("background-color: " + self.result_window.palette().window().color().name())
+        self.resize(self.result_window.size())
+
+
+    def search_word(self):
+        word = self.search_bar.text()
+        frequency, df, paragraph_ids, tf = get_word_details(word, self.cleaned_text)
+        paragraph_ids_str = ', '.join(map(str, paragraph_ids))  # Convert paragraph_ids to a comma-separated string
+        result_text = f"Frequency: {frequency}\nDF: {df}\nParagraph IDs: {paragraph_ids_str}\nTF: {tf}"
+        self.result_label.setText(result_text)
+
+
+
+
+
+
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -187,8 +192,7 @@ class MainWindow(QWidget):
         # Set the palette and the font
         self.setPalette(palette)
         QFontDatabase.addApplicationFont("/Users/didou/Developer/Projects/LexiQuete/fonts/noodle.ttf")
-        
-        # Left Side
+      
         left_layout = QVBoxLayout()
 
         logo_label = QLabel()
